@@ -12,8 +12,23 @@ def new_empty_table(count_vert):
     return table
 
 
-def get_sets(edge):
-    pass
+def get_sets(edges, del_edge):
+    a_set = [del_edge.a]
+    b_set = [del_edge.b]
+    i = 0
+    while len(a_set) + len(b_set) != len(Graph.origin_table):
+        if i == len(edges):
+            i = 0
+        if edges[i].a in a_set and not edges[i].b in a_set:
+            a_set.append(edges[i].b)
+        elif edges[i].b in a_set and not edges[i].a in a_set:
+            a_set.append(edges[i].a)
+        elif edges[i].a in b_set and not edges[i].b in b_set:
+            b_set.append(edges[i].b)
+        elif edges[i].b in b_set and not edges[i].a in b_set:
+            b_set.append(edges[i].a)
+        i += 1
+    return [a_set, b_set]
 
 
 class Edge:
@@ -37,7 +52,7 @@ class Graph:
 
     def __init__(self, edges=None):
         if edges is None:
-            self.edges = self.get_random_sceleton()
+            self.edges = Graph.get_random_sceleton(Graph.all_edges)
         else:
             self.edges = edges
         self.points = self.true_scoring_points()
@@ -50,7 +65,7 @@ class Graph:
                 string += "{:5d}".format(table[i][j])
                 if j == len(table[i]) - 1:
                     string += "\n"
-        return string
+        return string + "{:5d}".format(self.points) + "\n"
 
     @staticmethod
     def correct_table():
@@ -70,8 +85,8 @@ class Graph:
                     raise Exception("\nДля данного графа невозможно составить остов!")
 
     @staticmethod
-    def get_shuffled_edges():
-        edges = copy.deepcopy(Graph.all_edges)
+    def get_shuffled_edges(edges):
+        edges = copy.deepcopy(edges)
         random.shuffle(edges)
         return edges
 
@@ -91,8 +106,9 @@ class Graph:
             table[edge.b][edge.a] = Graph.origin_table[edge.b][edge.a]
         return table
 
-    def get_random_sceleton(self):
-        edges = self.get_shuffled_edges()
+    @staticmethod
+    def get_random_sceleton(original_edges):
+        edges = Graph.get_shuffled_edges(original_edges)
         included_edges = [edges[0]]
         vertexes = [edges[0].a, edges[0].b]
         i = 1
@@ -167,5 +183,38 @@ class Graph:
         return points
 
     def mutation(self):
-        edge = self.edges.pop(random.randint(0, len(self.edges)))
-        get_sets(edge)
+        if random.random() >= 0.3:
+            return False
+        del_edge = self.edges.pop(random.randint(0, len(self.edges) - 1))
+        sets = get_sets(self.edges, del_edge)
+        random.shuffle(Graph.all_edges)
+        for new_edge in Graph.all_edges:
+            if (new_edge.a in sets[0] and new_edge.b in sets[1]) or (
+                    new_edge.a in sets[1] and new_edge.b in sets[0]):
+                if del_edge.__eq__(new_edge):  # чтоб не попалось старое ребро, если других нет, то возьмет потом его
+                    continue
+                self.edges.append(new_edge)
+                break
+        if len(self.edges) != len(Graph.origin_table) - 1:
+            self.edges.append(del_edge)
+        else:
+            self.points = self.true_scoring_points()
+        return True
+
+    def crossing(self, second_graph, quantity):
+        edges = copy.deepcopy(self.edges)
+        for edge in second_graph.edges:
+            if not edge in edges:
+                edges.append(copy.deepcopy(edge))
+        arr = []
+        for i in range(0, quantity):
+            arr.append(Graph(Graph.get_random_sceleton(edges)))
+            arr[i].mutation()
+        return arr
+
+    def hemming_distance(self, second_graph):  # кол-во различных ребер
+        i = 0
+        for edge in self.edges:
+            if not edge in second_graph.edges:
+                i += 1
+        return i
