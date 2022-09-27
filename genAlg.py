@@ -10,10 +10,11 @@ def sort_by_points(entity):
 class GeneticAlgorithm:
     def __init__(self, table):
         Graph.origin_table = table
-        Graph.all_edges = Graph.get_edges()
         Graph.correct_table()
+        Graph.all_edges = Graph.get_edges()
         self.entities = []
         self.bests_scores = [sys.maxsize]
+        self.min_score = sys.maxsize
         self.generation_size = 2 * len(Graph.all_edges)
 
     def __str__(self):
@@ -26,6 +27,7 @@ class GeneticAlgorithm:
             if graph.points < self.bests_scores[-1]:
                 self.bests_scores[-1] = graph.points
             self.entities.append(graph)
+        self.min_score = self.bests_scores[-1]
 
     def generate_new_generation(self, pair_selection=1, children_selection=1):
         entities = []
@@ -34,7 +36,7 @@ class GeneticAlgorithm:
         elif pair_selection == 2:
             entities = self.outbreeding()
         elif pair_selection == 3:
-            entities = self.outbreeding()
+            entities = self.inbreeding()
         entities += self.entities
         if children_selection == 1:
             self.entities = self.truncation(entities)
@@ -49,8 +51,12 @@ class GeneticAlgorithm:
                     break
                 new_age.append(entity)
             self.entities = new_age
+        elif children_selection == 3:
+            self.entities = self.displacement_selection(entities)
         self.entities.sort(key=sort_by_points)
         self.bests_scores.append(self.entities[0].points)
+        if self.min_score > self.bests_scores[-1]:
+            self.min_score = self.bests_scores[-1]
 
     def panmixia(self):  # каждой особе случайный номер другой особи
         arr = []
@@ -91,3 +97,15 @@ class GeneticAlgorithm:
     def elite_selection(self, entities):  # отбираются 20% лучших, остальные создаются занаво
         entities.sort(key=sort_by_points)
         return entities[0:math.ceil(self.generation_size * 0.2)]
+
+    def displacement_selection(self, entities):
+        new_generation = []
+        entities.sort(key=sort_by_points)
+        for entity in entities:
+            if len(new_generation) >= self.generation_size:
+                break
+            if not entity in new_generation:
+                new_generation.append(entity)
+        if len(new_generation) < self.generation_size:
+            new_generation += entities[0:self.generation_size-len(new_generation)]
+        return new_generation

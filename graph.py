@@ -67,6 +67,12 @@ class Graph:
                     string += "\n"
         return string + "{:5d}".format(self.points) + "\n"
 
+    def __eq__(self, other):
+        for edge in self.edges:
+            if edge not in other.edges:
+                return False
+        return True
+
     @staticmethod
     def correct_table():
         if len(Graph.origin_table) == 0:
